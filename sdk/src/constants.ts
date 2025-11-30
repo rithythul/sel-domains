@@ -28,7 +28,7 @@ export const selendraMainnet = {
 } as const;
 
 export const selendraTestnet = {
-  id: 1961,
+  id: 1953,
   name: "Selendra Testnet",
   nativeCurrency: {
     name: "tSEL",

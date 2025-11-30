@@ -529,7 +529,7 @@ npm run lint
 | Network | Chain ID | RPC                              | Explorer                              |
 | ------- | -------- | -------------------------------- | ------------------------------------- |
 | Mainnet | 1961     | https://rpc.selendra.org         | https://explorer.selendra.org         |
-| Testnet | 1961     | https://rpc-testnet.selendra.org | https://explorer-testnet.selendra.org |
+| Testnet | 1953     | https://rpc-testnet.selendra.org | https://explorer-testnet.selendra.org |
 
 ---
 

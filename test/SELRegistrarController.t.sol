@@ -100,7 +100,7 @@ contract SELRegistrarControllerTest is Test {
 
     function test_RentPrice_3CharName() public view {
         (uint256 base, uint256 premium) = controller.rentPrice("abc", DURATION);
-        assertEq(base, 100 ether); // 100 SEL for 3-char
+        assertEq(base, 1000 ether); // 1000 SEL for 3-char
         assertEq(premium, 0);
     }
 
@@ -109,7 +109,7 @@ contract SELRegistrarControllerTest is Test {
             "abcd",
             DURATION
         );
-        assertEq(base, 50 ether); // 50 SEL for 4-char
+        assertEq(base, 250 ether); // 250 SEL for 4-char
         assertEq(premium, 0);
     }
 
@@ -118,7 +118,7 @@ contract SELRegistrarControllerTest is Test {
             "alice",
             DURATION
         );
-        assertEq(base, 10 ether); // 10 SEL for 5+ char
+        assertEq(base, 50 ether); // 50 SEL for 5+ char
         assertEq(premium, 0);
     }
 
@@ -354,5 +354,113 @@ contract SELRegistrarControllerTest is Test {
             new bytes[](0),
             false
         );
+    }
+
+    // ============ Reserved Names ============
+
+    function test_ReserveName_Success() public {
+        controller.reserveName("selendra");
+        assertTrue(controller.isReserved("selendra"));
+        assertFalse(controller.available("selendra"));
+    }
+
+    function test_ReserveName_RevertIfNotOwner() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        controller.reserveName("selendra");
+    }
+
+    function test_ReserveNames_Batch() public {
+        string[] memory names = new string[](3);
+        names[0] = "selendra";
+        names[1] = "bitriel";
+        names[2] = "koompi";
+
+        controller.reserveNames(names);
+
+        assertTrue(controller.isReserved("selendra"));
+        assertTrue(controller.isReserved("bitriel"));
+        assertTrue(controller.isReserved("koompi"));
+    }
+
+    function test_UnreserveName_Success() public {
+        controller.reserveName("selendra");
+        assertTrue(controller.isReserved("selendra"));
+
+        controller.unreserveName("selendra");
+        assertFalse(controller.isReserved("selendra"));
+        assertTrue(controller.available("selendra"));
+    }
+
+    function test_RegisterReserved_Success() public {
+        controller.reserveName("selendra");
+
+        controller.registerReserved("selendra", alice, DURATION, address(0));
+
+        uint256 tokenId = uint256(keccak256("selendra"));
+        assertEq(registrar.ownerOf(tokenId), alice);
+        assertFalse(controller.isReserved("selendra")); // Removed after registration
+    }
+
+    function test_RegisterReserved_RevertIfNotReserved() public {
+        vm.expectRevert("Name not reserved");
+        controller.registerReserved("alice", alice, DURATION, address(0));
+    }
+
+    function test_RegisterReserved_RevertIfNotOwner() public {
+        controller.reserveName("selendra");
+
+        vm.prank(alice);
+        vm.expectRevert();
+        controller.registerReserved("selendra", alice, DURATION, address(0));
+    }
+
+    function test_Available_FalseForReservedName() public {
+        assertTrue(controller.available("selendra"));
+        controller.reserveName("selendra");
+        assertFalse(controller.available("selendra"));
+    }
+
+    // ============ Governance ============
+
+    function test_SetPriceOracle_Success() public {
+        SimplePriceOracle newOracle = new SimplePriceOracle();
+
+        controller.setPriceOracle(IPriceOracle(address(newOracle)));
+
+        assertEq(address(controller.priceOracle()), address(newOracle));
+    }
+
+    function test_SetPriceOracle_RevertIfNotOwner() public {
+        SimplePriceOracle newOracle = new SimplePriceOracle();
+
+        vm.prank(alice);
+        vm.expectRevert();
+        controller.setPriceOracle(IPriceOracle(address(newOracle)));
+    }
+
+    function test_SetPriceOracle_RevertIfZeroAddress() public {
+        vm.expectRevert("Invalid oracle");
+        controller.setPriceOracle(IPriceOracle(address(0)));
+    }
+
+    function test_Withdraw_Success() public {
+        // Register a name to collect fees
+        _commitAndRegister("alice", alice);
+
+        uint256 contractBalance = address(controller).balance;
+        assertGt(contractBalance, 0);
+
+        uint256 bobBalanceBefore = bob.balance;
+        controller.withdraw(payable(bob));
+
+        assertEq(address(controller).balance, 0);
+        assertEq(bob.balance, bobBalanceBefore + contractBalance);
+    }
+
+    function test_Withdraw_RevertIfNotOwner() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        controller.withdraw(payable(alice));
     }
 }

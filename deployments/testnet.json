@@ -1,6 +1,6 @@
 {
   "network": "selendra_testnet",
-  "chainId": 1961,
+  "chainId": 1953,
   "deployer": "0xeC63B36363C4Dc5c3df20c4e46C261C10C4A3DD9",
   "timestamp": "2025-01-17",
   "contracts": {

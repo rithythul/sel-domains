@@ -3,13 +3,14 @@ pragma solidity ^0.8.20;
 
 import {ISNSRegistry} from "./SNSRegistry.sol";
 import {BaseRegistrar} from "./BaseRegistrar.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title SEL Registrar Controller
  * @notice Handles .sel domain registration with commit-reveal scheme
  * @dev Prevents front-running by requiring a commit before registration
  */
-contract SELRegistrarController {
+contract SELRegistrarController is Ownable {
     ISNSRegistry public immutable sns;
     BaseRegistrar public immutable baseRegistrar;
 
@@ -18,6 +19,9 @@ contract SELRegistrarController {
 
     // Commitment storage: commitment hash => timestamp
     mapping(bytes32 => uint256) public commitments;
+
+    // Reserved names that cannot be registered publicly
+    mapping(bytes32 => bool) public reservedNames;
 
     // Minimum and maximum commitment age (prevents front-running)
     uint256 public constant MIN_COMMITMENT_AGE = 60; // 1 minute
@@ -45,12 +49,15 @@ contract SELRegistrarController {
         uint256 expires
     );
     event Commit(bytes32 indexed commitment);
+    event NameReserved(string name, bytes32 indexed label);
+    event NameUnreserved(string name, bytes32 indexed label);
+    event PriceOracleUpdated(address indexed oldOracle, address indexed newOracle);
 
     constructor(
         ISNSRegistry _sns,
         BaseRegistrar _baseRegistrar,
         IPriceOracle _priceOracle
-    ) {
+    ) Ownable(msg.sender) {
         sns = _sns;
         baseRegistrar = _baseRegistrar;
         priceOracle = _priceOracle;
@@ -88,7 +95,16 @@ contract SELRegistrarController {
     function available(string memory name) public view returns (bool) {
         bytes32 label = keccak256(bytes(name));
         uint256 tokenId = uint256(label);
-        return valid(name) && baseRegistrar.available(tokenId);
+        return valid(name) && !reservedNames[label] && baseRegistrar.available(tokenId);
+    }
+
+    /**
+     * @notice Check if a name is reserved
+     * @param name The name to check (without .sel)
+     * @return True if reserved
+     */
+    function isReserved(string memory name) public view returns (bool) {
+        return reservedNames[keccak256(bytes(name))];
     }
 
     /**
@@ -266,12 +282,89 @@ contract SELRegistrarController {
     }
 
     /**
-     * @notice Withdraw collected fees
+     * @notice Withdraw collected fees (only owner)
      * @param to Address to send fees to
      */
-    function withdraw(address payable to) external {
-        // In production: require governance/owner permission
+    function withdraw(address payable to) external onlyOwner {
         to.transfer(address(this).balance);
+    }
+
+    // ============ Governance Functions ============
+
+    /**
+     * @notice Reserve a name (only owner)
+     * @param name The name to reserve (without .sel)
+     */
+    function reserveName(string calldata name) external onlyOwner {
+        bytes32 label = keccak256(bytes(name));
+        reservedNames[label] = true;
+        emit NameReserved(name, label);
+    }
+
+    /**
+     * @notice Reserve multiple names (only owner)
+     * @param names Array of names to reserve
+     */
+    function reserveNames(string[] calldata names) external onlyOwner {
+        for (uint256 i = 0; i < names.length; i++) {
+            bytes32 label = keccak256(bytes(names[i]));
+            reservedNames[label] = true;
+            emit NameReserved(names[i], label);
+        }
+    }
+
+    /**
+     * @notice Unreserve a name (only owner)
+     * @param name The name to unreserve
+     */
+    function unreserveName(string calldata name) external onlyOwner {
+        bytes32 label = keccak256(bytes(name));
+        reservedNames[label] = false;
+        emit NameUnreserved(name, label);
+    }
+
+    /**
+     * @notice Register a reserved name to a specific address (only owner)
+     * @dev Bypasses commit-reveal and payment for reserved names
+     * @param name The reserved name to register
+     * @param owner The address to register the name to
+     * @param duration Registration duration in seconds
+     * @param resolver The resolver address (optional)
+     */
+    function registerReserved(
+        string calldata name,
+        address owner,
+        uint256 duration,
+        address resolver
+    ) external onlyOwner {
+        bytes32 label = keccak256(bytes(name));
+        require(reservedNames[label], "Name not reserved");
+        require(valid(name), "Invalid name");
+        
+        uint256 tokenId = uint256(label);
+        require(baseRegistrar.available(tokenId), "Name already registered");
+        
+        uint256 expires;
+        if (resolver != address(0)) {
+            expires = baseRegistrar.registerWithConfig(tokenId, owner, duration, resolver);
+        } else {
+            expires = baseRegistrar.register(tokenId, owner, duration);
+        }
+        
+        // Remove from reserved after registration
+        reservedNames[label] = false;
+        
+        emit NameRegistered(name, label, owner, 0, expires);
+    }
+
+    /**
+     * @notice Update the price oracle (only owner)
+     * @param newOracle The new price oracle address
+     */
+    function setPriceOracle(IPriceOracle newOracle) external onlyOwner {
+        require(address(newOracle) != address(0), "Invalid oracle");
+        emit PriceOracleUpdated(address(priceOracle), address(newOracle));
+        priceOracle = newOracle;
     }
 
     // Internal functions
@@ -306,12 +399,16 @@ interface IPriceOracle {
 /**
  * @title Simple Price Oracle
  * @notice Basic pricing based on name length
+ * @dev Pricing tiers match SNS documentation:
+ *      - 3 chars: 1000 SEL/year (premium short names)
+ *      - 4 chars: 250 SEL/year
+ *      - 5+ chars: 50 SEL/year (standard names)
  */
 contract SimplePriceOracle is IPriceOracle {
     // Prices in SEL (with 18 decimals)
-    uint256 public constant PRICE_3_CHAR = 100 ether; // 100 SEL per year
-    uint256 public constant PRICE_4_CHAR = 50 ether; // 50 SEL per year
-    uint256 public constant PRICE_5_PLUS = 10 ether; // 10 SEL per year
+    uint256 public constant PRICE_3_CHAR = 1000 ether; // 1000 SEL per year
+    uint256 public constant PRICE_4_CHAR = 250 ether; // 250 SEL per year
+    uint256 public constant PRICE_5_PLUS = 50 ether; // 50 SEL per year
 
     uint256 constant SECONDS_PER_YEAR = 31536000;
 
