@@ -19,7 +19,8 @@ export const metadata: Metadata = {
   title: "SNS - Selendra Naming Service",
   description: "Human-readable names for the Selendra blockchain. Register your .sel domain today.",
   icons: {
-    icon: "https://selendra.org/selendra-logo.png",
+    icon: "/selendra-logo.png",
+    apple: "/selendra-logo.png",
   },
 };
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ConnectWallet } from "@/components/connect-wallet";
+import { NETWORK_INFO } from "@/lib/contracts";
 
 export function Header() {
   return (
@@ -10,7 +11,7 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2">
           <Image
-            src="https://selendra.org/selendra-logo.png"
+            src="/selendra-logo.png"
             alt="Selendra"
             width={32}
             height={32}
@@ -19,6 +20,11 @@ export function Header() {
           <span className="text-xl font-bold">
             <span className="text-[#0db0a4]">SNS</span>
           </span>
+          {!NETWORK_INFO.isMainnet && (
+            <span className="ml-1 rounded-md bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
+              Testnet
+            </span>
+          )}
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
