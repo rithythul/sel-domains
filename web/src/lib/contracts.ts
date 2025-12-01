@@ -1,8 +1,9 @@
 /**
  * Contract addresses loaded from environment variables
- * Set these in .env.local or via deployment pipeline
+ * Set these in .env.local or via Vercel deployment
  * 
  * Required env vars:
+ * - NEXT_PUBLIC_NETWORK (testnet | mainnet)
  * - NEXT_PUBLIC_SNS_REGISTRY
  * - NEXT_PUBLIC_SEL_REGISTRAR_CONTROLLER
  * - NEXT_PUBLIC_PUBLIC_RESOLVER
@@ -19,7 +20,7 @@ const getAddress = (envVar: string, fallback: string): `0x${string}` => {
   return value as `0x${string}`;
 };
 
-// Default addresses (testnet - chain 1953, deployed 2025-01-24)
+// Default addresses (testnet - chain 1953)
 const TESTNET_DEFAULTS = {
   SNSRegistry: "0x03BB6Dd5756774bdcC7D5BF6c5EF6Ea28E21A22a",
   SELRegistrarController: "0xC202368044C4e633B5585D3e9498E421b5955D8E",
@@ -29,13 +30,34 @@ const TESTNET_DEFAULTS = {
   BaseRegistrar: "0xbF0AF7D1b5a6F17A9C6448375B0f1c4788a27Ff6",
 };
 
+// Default addresses (mainnet - chain 1961) - to be updated after deployment
+const MAINNET_DEFAULTS = {
+  SNSRegistry: "0x0000000000000000000000000000000000000000",
+  SELRegistrarController: "0x0000000000000000000000000000000000000000",
+  PublicResolver: "0x0000000000000000000000000000000000000000",
+  PriceOracle: "0x0000000000000000000000000000000000000000",
+  ReverseRegistrar: "0x0000000000000000000000000000000000000000",
+  BaseRegistrar: "0x0000000000000000000000000000000000000000",
+};
+
+// Select defaults based on network
+const isMainnet = process.env.NEXT_PUBLIC_NETWORK === "mainnet";
+const DEFAULTS = isMainnet ? MAINNET_DEFAULTS : TESTNET_DEFAULTS;
+
 export const CONTRACT_ADDRESSES = {
-  SNSRegistry: getAddress("NEXT_PUBLIC_SNS_REGISTRY", TESTNET_DEFAULTS.SNSRegistry),
-  SELRegistrarController: getAddress("NEXT_PUBLIC_SEL_REGISTRAR_CONTROLLER", TESTNET_DEFAULTS.SELRegistrarController),
-  PublicResolver: getAddress("NEXT_PUBLIC_PUBLIC_RESOLVER", TESTNET_DEFAULTS.PublicResolver),
-  PriceOracle: getAddress("NEXT_PUBLIC_PRICE_ORACLE", TESTNET_DEFAULTS.PriceOracle),
-  ReverseRegistrar: getAddress("NEXT_PUBLIC_REVERSE_REGISTRAR", TESTNET_DEFAULTS.ReverseRegistrar),
-  BaseRegistrar: getAddress("NEXT_PUBLIC_BASE_REGISTRAR", TESTNET_DEFAULTS.BaseRegistrar),
+  SNSRegistry: getAddress("NEXT_PUBLIC_SNS_REGISTRY", DEFAULTS.SNSRegistry),
+  SELRegistrarController: getAddress("NEXT_PUBLIC_SEL_REGISTRAR_CONTROLLER", DEFAULTS.SELRegistrarController),
+  PublicResolver: getAddress("NEXT_PUBLIC_PUBLIC_RESOLVER", DEFAULTS.PublicResolver),
+  PriceOracle: getAddress("NEXT_PUBLIC_PRICE_ORACLE", DEFAULTS.PriceOracle),
+  ReverseRegistrar: getAddress("NEXT_PUBLIC_REVERSE_REGISTRAR", DEFAULTS.ReverseRegistrar),
+  BaseRegistrar: getAddress("NEXT_PUBLIC_BASE_REGISTRAR", DEFAULTS.BaseRegistrar),
+} as const;
+
+// Export network info for debugging
+export const NETWORK_INFO = {
+  isMainnet,
+  chainId: isMainnet ? 1961 : 1953,
+  name: isMainnet ? "Selendra Mainnet" : "Selendra Testnet",
 } as const;
 
 // ============ SNS Registry ABI ============

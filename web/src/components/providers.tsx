@@ -3,22 +3,36 @@
 import { ReactNode } from "react";
 import { WagmiProvider, http, createConfig } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  RainbowKitProvider,
-  connectorsForWallets,
-  darkTheme,
-} from "@rainbow-me/rainbowkit";
-import {
-  injectedWallet,
-  metaMaskWallet,
-  walletConnectWallet,
-} from "@rainbow-me/rainbowkit/wallets";
-import { defineChain } from "viem";
-import "@rainbow-me/rainbowkit/styles.css";
+import { injected } from "wagmi/connectors";
+import { defineChain, type Chain } from "viem";
+
+// Network configuration based on environment
+const isMainnet = process.env.NEXT_PUBLIC_NETWORK === "mainnet";
+
+// Define Selendra Mainnet (Chain ID 1961)
+export const selendraMainnet = defineChain({
+  id: 1961,
+  name: "Selendra",
+  nativeCurrency: {
+    decimals: 18,
+    name: "Selendra",
+    symbol: "SEL",
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://rpc.selendra.org"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Selendra Explorer",
+      url: "https://explorer.selendra.org",
+    },
+  },
+});
 
 // Define Selendra Testnet (Chain ID 1953)
-// For development, we use testnet by default
-const selendraTestnet = defineChain({
+export const selendraTestnet = defineChain({
   id: 1953,
   name: "Selendra Testnet",
   nativeCurrency: {
@@ -33,36 +47,36 @@ const selendraTestnet = defineChain({
   },
   blockExplorers: {
     default: {
-      name: "Selendra Portal",
-      url: "https://portal.selendra.org/?rpc=wss%3A%2F%2Frpc-testnet.selendra.org#/explorer",
+      name: "Selendra Testnet Explorer",
+      url: "https://explorer-testnet.selendra.org",
     },
   },
   testnet: true,
 });
 
-// Only use the wallets we actually need
-const connectors = connectorsForWallets(
-  [
-    {
-      groupName: "Recommended",
-      wallets: [injectedWallet, metaMaskWallet, walletConnectWallet],
-    },
-  ],
-  {
-    appName: "SNS - Selendra Naming Service",
-    projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "demo",
-  }
-);
+// Select chain based on environment
+export const activeChain: Chain = isMainnet ? selendraMainnet : selendraTestnet;
 
-// Configure wagmi - using only testnet for now
-const config = createConfig({
-  connectors,
+// Configure wagmi - separate configs for each network to satisfy TypeScript
+const testnetConfig = createConfig({
   chains: [selendraTestnet],
+  connectors: [injected()],
   transports: {
     [selendraTestnet.id]: http("https://rpc-testnet.selendra.org"),
   },
   ssr: true,
 });
+
+const mainnetConfig = createConfig({
+  chains: [selendraMainnet],
+  connectors: [injected()],
+  transports: {
+    [selendraMainnet.id]: http("https://rpc.selendra.org"),
+  },
+  ssr: true,
+});
+
+const config = isMainnet ? mainnetConfig : testnetConfig;
 
 // Create query client
 const queryClient = new QueryClient();
@@ -74,18 +88,7 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
-          theme={darkTheme({
-            accentColor: "#0db0a4",
-            accentColorForeground: "white",
-            borderRadius: "medium",
-          })}
-          modalSize="compact"
-        >
-          {children}
-        </RainbowKitProvider>
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </WagmiProvider>
   );
 }

@@ -806,7 +806,7 @@ function SuccessStep({
               <ExternalLink className="ml-2 h-4 w-4" />
             </Button>
           </Link>
-          <Link href={`/manage/${name}`}>
+          <Link href={`/domain/${name}.sel`}>
             <Button variant="outline" className="w-full">
               Manage Domain
             </Button>
