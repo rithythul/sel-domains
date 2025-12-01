@@ -329,6 +329,34 @@ nath.sel.link → Gateway server → Resolve → Serve content
 - [ ] Query SNS on request
 - [ ] Proxy or redirect to content
 
+#### Future: EIP-4804 / ERC-6860 Web3 URLs
+
+An emerging standard for decentralized web access. If browsers adopt this protocol natively, `.sel` domains could work without extensions.
+
+**Protocol Format:**
+```
+web3://nath.sel                     → Resolves via blockchain
+web3://nath.sel/path/to/file        → Serve specific content
+web3://nath.sel:1953/               → Explicit chain ID (Selendra testnet)
+```
+
+**How it Works:**
+1. Browser recognizes `web3://` protocol
+2. Parses domain and resolves via ENS/SNS-compatible resolver
+3. Fetches content from IPFS/Arweave/on-chain storage
+4. Renders content in browser
+
+**Implementation Tasks:**
+- [ ] Support ERC-6860 contenthash format in PublicResolver
+- [ ] Register Selendra chain ID with web3:// protocol
+- [ ] Update extension to handle `web3://` URLs
+- [ ] Documentation for users setting contenthash
+
+**References:**
+- [EIP-4804: Web3 URL to EVM Call Message Translation](https://eips.ethereum.org/EIPS/eip-4804)
+- [ERC-6860: Web3 URL Standard](https://eips.ethereum.org/EIPS/eip-6860)
+- [web3url.io](https://web3url.io) - Reference implementation
+
 ---
 
 ### Subdomains
