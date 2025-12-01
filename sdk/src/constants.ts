@@ -54,14 +54,14 @@ export const selendraTestnet = {
 
 // Contract addresses (testnet)
 export const testnetAddresses = {
-  SNSRegistry: "0x64Ff7c36e879516724dFE312c5D6C704d6bD6be1" as `0x${string}`,
-  PublicResolver: "0x4d379C8bbee421f6742b078956F2714D701Aa997" as `0x${string}`,
-  BaseRegistrar: "0x875C6bDc6C315FCFF1429B80D39C0259E5cFcaa3" as `0x${string}`,
-  PriceOracle: "0xf157c876e1206A2AA22A36EF034986e8B621a851" as `0x${string}`,
+  SNSRegistry: "0x03BB6Dd5756774bdcC7D5BF6c5EF6Ea28E21A22a" as `0x${string}`,
+  PublicResolver: "0xFE6c7Ed8FA52FEA2149fd98a60a8e986DBEa0f8a" as `0x${string}`,
+  BaseRegistrar: "0xbF0AF7D1b5a6F17A9C6448375B0f1c4788a27Ff6" as `0x${string}`,
+  PriceOracle: "0x81eBB2a59e61D268c47f4F707e7D4f2aAfd9b890" as `0x${string}`,
   SELRegistrarController:
-    "0xD45c5b8df20Bb0be78e85aeaE56606D385770691" as `0x${string}`,
+    "0x76B2F67AE09E2956967DF4303d9e914791B323dC" as `0x${string}`,
   ReverseRegistrar:
-    "0x009439C9b8BFa22f5cbdEb479bAA8e5Fa2041899" as `0x${string}`,
+    "0xB708898adFeAC80aA1F9cD1Da2B3113d7f5B825E" as `0x${string}`,
 } as const;
 
 // Contract addresses (mainnet) - to be filled after deployment
