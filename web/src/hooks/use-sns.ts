@@ -544,9 +544,6 @@ export function useReverseResolve(address: string) {
 
 // ============ useOwnedDomains ============
 
-// Old controller address (for fetching historical NameRegistered events)
-const OLD_CONTROLLER_ADDRESS = "0x76B2F67AE09E2956967DF4303d9e914791B323dC" as Address;
-
 /**
  * Get domains owned by an address
  * Note: This uses events to find owned domains. For production,
@@ -569,37 +566,23 @@ export function useOwnedDomains(ownerAddress: string) {
     setError(null);
 
     try {
-      // Get NameRegistered events from BOTH old and new controllers
-      const nameRegisteredEvent = {
-        type: "event" as const,
-        name: "NameRegistered" as const,
-        inputs: [
-          { name: "name", type: "string", indexed: false },
-          { name: "label", type: "bytes32", indexed: true },
-          { name: "owner", type: "address", indexed: true },
-          { name: "cost", type: "uint256", indexed: false },
-          { name: "expires", type: "uint256", indexed: false },
-        ],
-      };
-
-      // Query new controller
-      const newControllerLogs = await publicClient.getLogs({
+      // Get NameRegistered events from the current controller only
+      const nameRegisteredLogs = await publicClient.getLogs({
         address: CONTRACT_ADDRESSES.SELRegistrarController,
-        event: nameRegisteredEvent,
+        event: {
+          type: "event",
+          name: "NameRegistered",
+          inputs: [
+            { name: "name", type: "string", indexed: false },
+            { name: "label", type: "bytes32", indexed: true },
+            { name: "owner", type: "address", indexed: true },
+            { name: "cost", type: "uint256", indexed: false },
+            { name: "expires", type: "uint256", indexed: false },
+          ],
+        },
         fromBlock: "earliest",
         toBlock: "latest",
       });
-
-      // Query old controller
-      const oldControllerLogs = await publicClient.getLogs({
-        address: OLD_CONTROLLER_ADDRESS,
-        event: nameRegisteredEvent,
-        fromBlock: "earliest",
-        toBlock: "latest",
-      });
-
-      // Combine logs from both controllers
-      const nameRegisteredLogs = [...newControllerLogs, ...oldControllerLogs];
 
       // Build a map from labelhash (tokenId as hex) to name
       const labelToName = new Map<string, string>();
@@ -690,12 +673,16 @@ export function useOwnedDomains(ownerAddress: string) {
           // Look up the actual name from the NameRegistered events
           const actualName = labelToName.get(tokenId.toString());
 
-          domainInfos.push({
-            name: actualName ? `${actualName}.sel` : `unknown-${tokenId.toString().slice(0, 8)}.sel`,
-            labelhash: labelHashHex,
-            owner: ownerAddress as Address,
-            expires: expires as bigint,
-          });
+          // Only include domains registered with the current controller
+          // (skip domains from old controller that show as "unknown")
+          if (actualName) {
+            domainInfos.push({
+              name: `${actualName}.sel`,
+              labelhash: labelHashHex,
+              owner: ownerAddress as Address,
+              expires: expires as bigint,
+            });
+          }
         } catch {
           // Skip tokens that fail to load
           console.warn(`Failed to load domain info for token ${tokenId}`);
