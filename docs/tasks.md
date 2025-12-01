@@ -225,6 +225,112 @@ Reserve system names before public launch:
 
 ## Future Ideas 💡
 
+### Browser Extension for .sel Resolution
+
+Enable `.sel` domains to work like traditional domains (`.com`, `.org`) directly in browsers.
+
+**Goal:** Users type `nath.sel` in browser → resolves to content
+
+#### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Browser Extension                         │
+├─────────────────────────────────────────────────────────────┤
+│  1. URL Interceptor                                          │
+│     - Detect *.sel navigation                                │
+│     - Block default "not found" behavior                     │
+│                                                              │
+│  2. SNS Resolver                                             │
+│     - Query PublicResolver contract on Selendra              │
+│     - Fetch: contenthash, url, addr records                  │
+│                                                              │
+│  3. Content Router                                           │
+│     - IPFS/IPNS → Redirect to gateway (ipfs.io, dweb.link)  │
+│     - URL record → Redirect to website                       │
+│     - No content → Show profile page on sns.selendra.org     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Features
+
+**Phase 1: Basic Resolution**
+- [ ] Intercept `.sel` URLs in Chrome/Firefox
+- [ ] Query SNS contracts via RPC
+- [ ] Redirect to `url` text record if set
+- [ ] Fallback to profile page on web app
+
+**Phase 2: Content Hash Support**
+- [ ] Support IPFS content hash resolution
+- [ ] Support IPNS resolution
+- [ ] Configurable IPFS gateway (default: dweb.link)
+
+**Phase 3: Enhanced UX**
+- [ ] Loading indicator while resolving
+- [ ] Error page for unregistered domains
+- [ ] Cache resolved addresses (with TTL)
+- [ ] Settings page for RPC endpoint
+
+**Phase 4: Advanced Features**
+- [ ] Support subdomains (app.nath.sel)
+- [ ] ENS-style `web3://` protocol support
+- [ ] Decentralized gateway fallbacks
+
+#### Technical Stack
+
+```
+extension/
+├── manifest.json          # Chrome/Firefox manifest v3
+├── background.js          # Service worker for interception
+├── content.js             # Injected script (if needed)
+├── popup/                 # Extension popup UI
+│   ├── popup.html
+│   └── popup.js
+├── lib/
+│   ├── resolver.js        # SNS resolution logic
+│   ├── namehash.js        # Copy from SDK
+│   └── contracts.js       # Contract addresses & ABIs
+└── icons/                 # Extension icons
+```
+
+#### Resolution Priority
+
+1. **contenthash** → IPFS/IPNS gateway redirect
+2. **url** text record → Direct redirect
+3. **addr** only → Profile page at `sns.selendra.org/domain/{name}`
+4. **Not registered** → "Domain not found" page
+
+#### Example Flow
+
+```
+User types: nath.sel
+     ↓
+Extension intercepts navigation
+     ↓
+Query: PublicResolver.text(namehash("nath.sel"), "url")
+     ↓
+Result: "https://nath.dev"
+     ↓
+Redirect browser to https://nath.dev
+```
+
+#### Alternative: Gateway Service
+
+If extension adoption is slow, also consider a gateway:
+
+```
+nath.sel.link → Gateway server → Resolve → Serve content
+```
+
+**Gateway Implementation:**
+- [ ] Set up domain (e.g., sel.link or sns.to)
+- [ ] Node.js/Cloudflare Worker backend
+- [ ] Wildcard DNS (*.sel.link)
+- [ ] Query SNS on request
+- [ ] Proxy or redirect to content
+
+---
+
 ### Subdomains
 
 ```
